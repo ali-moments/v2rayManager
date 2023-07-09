@@ -161,3 +161,5 @@ cython_debug/
 
 notes.txt
 config.ini
+other/
+logs/*
