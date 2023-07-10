@@ -1,13 +1,10 @@
 # -*- coding: utf-8 -*-
 
-import configparser
-import json
-from colorama import Fore
 import os
+import json
 import logging
+import configparser
 from logging.handlers import TimedRotatingFileHandler
-import xui.api as api
-from xui.users import Users
 from telegram import (
     Update, InlineKeyboardButton, InlineKeyboardMarkup
 )
@@ -16,6 +13,9 @@ from telegram.ext import (
     Filters , CallbackQueryHandler
 )
 
+import xui.api as api
+import xui.utils as utils
+from xui.users import Users
 
 if not os.path.exists('logs'):
     os.makedirs('logs')
