@@ -1,13 +1,19 @@
 # -*- coding: utf-8 -*-
 
 import configparser
+import json
 from colorama import Fore
 import os
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import xui.api as api
-from telegram.ext import CommandHandler, Updater
-
+from telegram import (
+    Update, InlineKeyboardButton, InlineKeyboardMarkup
+)
+from telegram.ext import (
+    Updater, CommandHandler, CallbackContext, MessageHandler, 
+    Filters , CallbackQueryHandler
+)
 
 
 if not os.path.exists('logs'):
@@ -29,21 +35,26 @@ logger.addHandler(file_handler)
 
 def load_configs():
     global TOKEN, admin_chatids, panel_username, \
-        panel_password, panel_ip, panel_port
+        panel_password, panel_ip, panel_port, default_lang
+    
     cfg = configparser.ConfigParser()
     cfg.read("config.ini")
+
     TOKEN = cfg.get("telegram.bot", "token")
     admin_chatids = cfg.get("telegram.bot", "admin_chatids").split(",")
     panel_ip = cfg.get("xui-server", "ip")
     panel_port = cfg.get("xui-server", "port")
     panel_username = cfg.get("xui-server", "panel_username")
     panel_password = cfg.get("xui-server", "panel_password")
+    default_lang = cfg.get("telegram.bot", "default_language")
 
     logger.info("Configs reloaded.")
 
 
-load_configs()
+with open("locals/messages.json", "r") as f:
+    messages = json.loads(f.read())
 
+load_configs()
 xui = api.XUI(
     ip = panel_ip,
     port = panel_port,
@@ -51,4 +62,55 @@ xui = api.XUI(
     password = panel_password
 )
 
-print(xui.get_clients(2))
+
+
+
+def start_command(update: Update, context: CallbackContext):
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=messages[default_lang]["start"]
+    )
+
+def help_command(update: Update, context: CallbackContext):
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=messages[default_lang]["help"]
+    )
+
+def admin_panel_command(update: Update, context: CallbackContext):
+    if not str(update.effective_chat.id) in admin_chatids:
+        return
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text="admin panel activated."
+    )
+    
+
+
+def text_message(update: Update, context: CallbackContext):
+    message = update.message
+    context.bot.send_message(
+        chat_id=message.chat_id,
+        text=messages[default_lang]["unknown-text"]
+    )
+
+
+
+
+updater = Updater(token=TOKEN, use_context=True)
+dispatcher = updater.dispatcher
+
+# ommand handlers
+dispatcher.add_handler(CommandHandler('start', start_command))
+dispatcher.add_handler(CommandHandler('help', help_command))
+dispatcher.add_handler(CommandHandler('admin_panel', admin_panel_command))
+
+# message handler
+dispatcher.add_handler(MessageHandler(Filters.text & (~Filters.command), text_message))
+
+# callback handler for inline keyboard
+
+
+
+updater.start_polling()
+updater.idle()
