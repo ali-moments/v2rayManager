@@ -163,3 +163,7 @@ notes.txt
 config.ini
 other/
 logs/*
+xui/test.py
+xui/users.db
+test.py
+todo.txt

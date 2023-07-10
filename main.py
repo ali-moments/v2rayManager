@@ -7,6 +7,7 @@ import os
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import xui.api as api
+from xui.users import Users
 from telegram import (
     Update, InlineKeyboardButton, InlineKeyboardMarkup
 )
@@ -61,14 +62,17 @@ xui = api.XUI(
     username = panel_username,
     password = panel_password
 )
-
-
+users = Users()
 
 
 def start_command(update: Update, context: CallbackContext):
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=messages[default_lang]["start"]
+    )
+    users.add_user(
+        username=update.effective_user.username,
+        chat_id=update.effective_user.id
     )
 
 def help_command(update: Update, context: CallbackContext):
