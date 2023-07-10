@@ -6,7 +6,7 @@ import logging
 import configparser
 from logging.handlers import TimedRotatingFileHandler
 from telegram import (
-    Update, InlineKeyboardButton, InlineKeyboardMarkup
+    ReplyKeyboardMarkup, Update, InlineKeyboardButton, InlineKeyboardMarkup
 )
 from telegram.ext import (
     Updater, CommandHandler, CallbackContext, MessageHandler, 
@@ -66,13 +66,21 @@ users = Users()
 
 
 def start_command(update: Update, context: CallbackContext):
-    context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text=messages[default_lang]["start"]
-    )
     users.add_user(
         username=update.effective_user.username,
         chat_id=update.effective_user.id
+    )
+    buttons = [
+        ["Button 1", "Button 2"],
+        ["Button 3", "Button 4"],
+        ["Button 5", "Button 6"],
+        ["Button 7"]
+    ]
+    reply_markup = ReplyKeyboardMarkup(buttons, resize_keyboard=True)
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=messages[default_lang]["start"],
+        reply_markup=reply_markup
     )
 
 def help_command(update: Update, context: CallbackContext):
