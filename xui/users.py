@@ -4,9 +4,9 @@ import os
 class Users:
     def __init__(self):
         self.db_path = os.path.join("xui", "users.db")
-        self.create_table()
+        self.__create_table()
 
-    def create_table(self) -> None:
+    def __create_table(self) -> None:
         connection = sqlite3.connect(self.db_path)
         cursor = connection.cursor()
         cursor.execute('''
