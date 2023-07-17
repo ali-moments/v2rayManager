@@ -159,11 +159,16 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
+
+
+# other files
+
 notes.txt
 config.ini
 other/
 logs/*
 xui/test.py
-xui/users.db
+xui/users.sqlite
 test.py
 todo.txt
+test/

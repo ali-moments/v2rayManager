@@ -160,8 +160,28 @@ class XUI:
                     return json.loads(r.content)["success"]
         return False
 
-    
+    def get_client_url(self, inboundId:int, email:str) -> str:
+        try:
+            client = [x for x in self.get_inbound(inboundId) if x['email']==email][0]
+            data = self.__inbound_info(inboundId)
+            data["ps"] = f"-{email}"
+            data["id"] = client["id"]
+            return f"vmess://{base64.urlsafe_b64encode(str(data).encode()).decode()}"
+        except:
+            return ""
 
+    def __inbound_info(self, inboundId: int) -> dict:
+        if inboundId == 1:
+            return {"v": "2","ps": None,"add": self.ip,"port": 443,"id": None,"aid": 0,"net": "tcp","type": "http","tls": "none","path": "/","host": "telewebion.com"}
+        if inboundId == 2:
+            pass
+        if inboundId == 4:
+            pass
+        if inboundId == 5:
+            pass
+        if inboundId == 6:
+            pass
+        return {}
 
 if __name__ == "__main__":
     print(
