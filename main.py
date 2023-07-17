@@ -17,7 +17,7 @@ async def hello(update: Update, context: CallbackContext) -> None:
 # =======================================================================
 async def start(update: Update, context: CallbackContext) -> None:
     # global messages, buttons1
-    ans = messages.loc[messages["title"] == "start_command"]["message"]
+    ans = messages.loc[messages["title"] == "start_command"]["message"].iloc[0]
     temp0 = update.effective_user.id
     temp = my_DB.execute(f"SELECT 1 FROM ids_states WHERE tel_id = {temp0}")
     temp = temp.fetchall()
@@ -25,7 +25,7 @@ async def start(update: Update, context: CallbackContext) -> None:
         my_DB.execute(f"INSERT INTO ids_states(tel_id, last_state, connected_to_account) VALUES ({temp0}, 0, 0)")
     else:
         my_DB.execute(f"UPDATE ids_states SET last_state = 0 and connected_to_account = 0 WHERE tel_id = {temp0};")
-    await update.message.reply_text(ans[0], reply_markup=buttons1.get_starter_keys())
+    await update.message.reply_text(ans, reply_markup=buttons1.get_starter_keys())
 
 
 # =======================================================================
@@ -73,6 +73,7 @@ if __name__=="__main__":
     # init base proj
     app = ApplicationBuilder().token(constant.BOT_KEY).build()
     messages = pd.read_csv("default_messages.csv")
+    messages["message"] = messages["message"].str.replace(r'nwl', '\n')
     buttons1 = but.before_login()
     data_base = 'tel_bot_data.db'
     my_DB = DB.DataBase(data_base)
@@ -87,8 +88,12 @@ if __name__=="__main__":
     # error handler
     app.add_error_handler(error_message)
     # -------------------------------------------------------------------
-    print("\tstarted polling ... \n\n")
-    app.run_polling()
-    my_DB.commit()
-    my_DB.close()
-    print("\n\n\tfinish ...")
+    try:
+        print("\tstarted polling ... \n\n")
+        app.run_polling()
+    except Exception as e:
+        print(f"\n\nerror message:\n{e}\n\n")
+    finally:
+        my_DB.commit()
+        my_DB.close()
+        print("\n\n\tfinish ...")

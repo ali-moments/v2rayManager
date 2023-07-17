@@ -51,17 +51,22 @@ class XUI:
         print(f"[error] Failed to retrieve inbound with ID {id_}!")
         return {}
 
-    def add_client(
+    def add_client_to_inbound(
         self,
         inboundId: int,
         totalGB: int,
         tgId: str = "",
         email: str = "",
     ) -> dict:
-        if not email:
+        if not email or email in self.get_all_emails():
             email = "".join(
                 random.choices(string.ascii_lowercase + string.digits, k=10)
             )
+            while email in self.get_all_emails():
+                email = "".join(
+                    random.choices(string.ascii_lowercase + string.digits, k=10)
+                )
+            
         client_data = {
             "id": str(uuid.uuid4()),
             "alterId": 0,
@@ -80,7 +85,7 @@ class XUI:
             return {"success": True, "client": client_data}
         return {"success": False, "client": None}
 
-    def get_clients(self, inboundId: int) -> list:
+    def get_clients_of_inbound(self, inboundId: int) -> list:
         try:
             return json.loads(self.get_inbound(inboundId)["settings"])["clients"]
         except:
@@ -97,45 +102,41 @@ class XUI:
                     return json.loads(r.content)["success"]
         return False
 
-    def edit_client(
-        self,
-        inboundId: int,
-        id_: str,
-        alterId: int,
-        email: str,
-        totalGB: int,
-        expTime: int,
-        tgId: str,
-        enabled: bool,
-        subId: str,
-    ) -> dict:
-        if not email:
-            email = "".join(
-                random.choices(string.ascii_lowercase + string.digits, k=10)
-            )
-        client_data = {
-            "id": id_,
-            "alterId": alterId,
-            "email": email,
-            "totalGB": totalGB * (1024**3),
-            "expiryTime": expTime,
-            "enable": enabled,
-            "tgId": tgId,
-            "subId": subId,
-        }
-        payload = {"id": inboundId, "settings": json.dumps({"clients": [client_data]})}
-        r = self.session.post(
-            f"{self.panel_url}API/inbound/updateClient/{id_}", data=payload
-        )
-        if json.loads(r.content)["success"]:
-            return {"success": True, "client": client_data}
+    def edit_client(self,id_: str,alterId: int,email: str,totalGB: int,expTime: int,tgId: str,enabled: bool,subId: str,) -> dict:
+        for inbound in self.get_all_inbounds():
+            for client in json.loads(inbound["settings"])["clients"]:
+                if client["email"] == email:
+                    inboundId = inbound["id"]
+                    client_data = {
+                        "id": id_,
+                        "alterId": alterId,
+                        "email": email,
+                        "totalGB": totalGB * (1024**3),
+                        "expiryTime": expTime,
+                        "enable": enabled,
+                        "tgId": tgId,
+                        "subId": subId,
+                    }
+                    payload = {"id": inboundId, "settings": json.dumps({"clients": [client_data]})}
+                    r = self.session.post(
+                        f"{self.panel_url}API/inbound/updateClient/{id_}", data=payload
+                    )
+                    if json.loads(r.content)["success"]:
+                        return {"success": True, "client": client_data}
         return {"success": False, "client": None}
 
-    def get_all_emails(self, inboundId: int) -> list:
+    def get_emails_of_inbound(self, inboundId: int) -> list:
         try:
-            return [client["email"] for client in self.get_clients(inboundId)]
+            return [client["email"] for client in self.get_clients_of_inbound(inboundId)]
         except:
             return []
+    
+    def get_all_emails(self) -> list:
+        try:
+            return [client["email"] for inboundId in [x["id"] for x in self.get_all_inbounds()] for client in self.get_clients_of_inbound(inboundId)]
+        except:
+            return []
+
 
     def get_all_status(self) -> list:
         try:
@@ -159,6 +160,19 @@ class XUI:
                     )
                     return json.loads(r.content)["success"]
         return False
+    
+    def renewal_subscription(self, email:str, totalGB:int=None) -> bool:
+        pass
+
+    def get_remaining_volume(self, email:str) -> None:
+        
+        return self.get_client_stats(email)
+
+    def get_remaining_time(self, email:str) -> None:
+        pass
+
+    def check_account(self, email:str) -> bool:
+        pass
 
     def get_client_url(self, inboundId:int, email:str) -> str:
         try:
@@ -189,4 +203,13 @@ if __name__ == "__main__":
         this api is specified for https://github.com/alireza0/x-ui/ panel 
     """
     )
+
+    panel = XUI(
+        ip="5.75.198.82",
+        port=1402,
+        username="admin",
+        password="admin"
+    )
+
+    print(panel.get_remaining_volume("T256"))
 
