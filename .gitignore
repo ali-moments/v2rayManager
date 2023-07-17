@@ -172,3 +172,4 @@ xui/users.sqlite
 test.py
 todo.txt
 test/
+constant.py
