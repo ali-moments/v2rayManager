@@ -4,6 +4,7 @@ import uuid
 import random
 import string
 import requests
+import urllib.parse
 from datetime import datetime, timedelta
 
 
@@ -161,55 +162,103 @@ class XUI:
                     return json.loads(r.content)["success"]
         return False
     
-    def renewal_subscription(self, email:str, totalGB:int=None) -> bool:
-        pass
-
-    def get_remaining_volume(self, email:str) -> None:
+    def renewal_subscription(self, email:str, totalGB:int=None, days=30) -> dict:
+        data = self.get_client_stats(email)
+        if not totalGB:
+            totalGB = data["total"]
+        rt = self.get_remaining_time(email)
+        rv = self.get_remaining_volume(email)
+        if totalGB != 0 and (rt > 0 or rt == -1):
+            totalGB += rv
+        else:
+            self.reset_client_traffic(email)
+        for client in self.get_clients_of_inbound(data["inboundId"]):
+            if client["email"] == email:
+                break
+        exptime = int((datetime.now() + timedelta(days=days)).timestamp() * 1000)
+        r = self.edit_client(
+            id_=client["id"],
+            alterId=client["alterId"],
+            email=email,
+            totalGB=totalGB,
+            expTime=exptime,
+            tgId=client["tgId"],
+            enabled=True,
+            subId=client["subId"]
+        )
+        return r
         
-        return self.get_client_stats(email)
+    def get_remaining_volume(self, email:str) -> None:
+        data = self.get_client_stats(email)
+        if data["total"] == 0:
+            return -1 # no limit
+        remain = data["total"] - (data["up"] + data["down"])
+        if remain <= 0:
+            return 0 # end
+        return remain # remaining volume
 
     def get_remaining_time(self, email:str) -> None:
-        pass
+        data = self.get_client_stats(email)
+        if data["expiryTime"] == 0:
+            return -1 # no limit
+        remaining_time_ms = data["expiryTime"] - int(datetime.now().timestamp() * 1000)
+        if remaining_time_ms <= 0:
+            return 0  # expired, return 0 seconds
+        return remaining_time_ms # remaining time
 
     def check_account(self, email:str) -> bool:
-        pass
+        rv = self.get_remaining_volume(email)
+        rt = self.get_remaining_time(email)
+        if rt == -1 and rv == -1:
+            return True
+        if rt == 0:
+            return False
+        if rv == 0:
+            return False
+        if rv > 0 or rt > 0:
+            return True
+        return False
 
-    def get_client_url(self, inboundId:int, email:str) -> str:
+    def get_client_url(self, email:str, inboundId:int=None) -> str:
         try:
-            client = [x for x in self.get_inbound(inboundId) if x['email']==email][0]
-            data = self.__inbound_info(inboundId)
-            data["ps"] = f"-{email}"
-            data["id"] = client["id"]
-            return f"vmess://{base64.urlsafe_b64encode(str(data).encode()).decode()}"
+            if not inboundId:
+                inboundId = next((inbound["id"] for inbound in self.get_all_inbounds() for client in json.loads(inbound["settings"])["clients"] if client["email"] == email), None)
+            client = [x for x in json.loads(self.get_inbound(inboundId)["settings"])["clients"] if x['email']==email][0]
+            inbound = panel.get_inbound(inboundId)
+            settings = json.loads(inbound["streamSettings"])
+            if inbound["protocol"] == "vmess":
+                data = {
+                    "v": "2",
+                    "ps": f"-{email}",
+                    "add": self.ip,
+                    "port": inbound["port"],
+                    "id": client["id"],
+                    "aid": 0,
+                    "net": settings["network"],
+                    "type": settings["tcpSettings"]["header"]["type"],
+                    "tls": settings["security"],
+                    "path": settings["tcpSettings"]["header"]["request"]["path"][0],
+                    "host": settings["tcpSettings"]["header"]["request"]["headers"]["Host"][0]
+                }
+                return "vmess://" + base64.urlsafe_b64encode(json.dumps(data, indent=2).encode('utf-8')).decode()
+            elif inbound["protocol"] == "vless":
+                id_ = client["id"]
+                port = inbound["port"]
+                type_ = settings["network"]
+                path = urllib.parse.quote(settings["tcpSettings"]["header"]["request"]["path"][0], safe='')
+                host = settings["tcpSettings"]["header"]["request"]["headers"]["Host"][0]
+                headertype = settings["tcpSettings"]["header"]["type"]
+                return f"vless://{id_}@{self.ip}:{port}?type={type_}&path={path}&host={host}&headerType={headertype}#-{email}"
+            return ""
         except:
             return ""
-
-    def __inbound_info(self, inboundId: int) -> dict:
-        if inboundId == 1:
-            return {"v": "2","ps": None,"add": self.ip,"port": 443,"id": None,"aid": 0,"net": "tcp","type": "http","tls": "none","path": "/","host": "telewebion.com"}
-        if inboundId == 2:
-            pass
-        if inboundId == 4:
-            pass
-        if inboundId == 5:
-            pass
-        if inboundId == 6:
-            pass
-        return {}
 
 if __name__ == "__main__":
     print(
         """
         this api is specified for https://github.com/alireza0/x-ui/ panel 
-    """
+        """
     )
 
-    panel = XUI(
-        ip="5.75.198.82",
-        port=1402,
-        username="admin",
-        password="admin"
-    )
-
-    print(panel.get_remaining_volume("T256"))
-
+    
+    
