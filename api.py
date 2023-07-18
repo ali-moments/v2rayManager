@@ -93,38 +93,38 @@ class XUI:
             print(f"[error] Failed to retrive clients of inbound {inboundId}")
             return []
 
-    def del_client(self, cid: str) -> bool:
+    def del_client(self, email: str) -> bool:
         for inbound in self.get_all_inbounds():
             for client in json.loads(inbound["settings"])["clients"]:
-                if client["id"] == cid:
+                if client["email"] == email:
                     r = self.session.post(
-                        f"{self.panel_url}API/inbounds/{inbound['id']}/delClient/{cid}"
+                        f"{self.panel_url}API/inbounds/{inbound['id']}/delClient/{client['id']}"
                     )
                     return json.loads(r.content)["success"]
         return False
 
-    def edit_client(self,id_: str,alterId: int,email: str,totalGB: int,expTime: int,tgId: str,enabled: bool,subId: str,) -> dict:
-        for inbound in self.get_all_inbounds():
-            for client in json.loads(inbound["settings"])["clients"]:
-                if client["email"] == email:
-                    inboundId = inbound["id"]
-                    client_data = {
-                        "id": id_,
-                        "alterId": alterId,
-                        "email": email,
-                        "totalGB": totalGB * (1024**3),
-                        "expiryTime": expTime,
-                        "enable": enabled,
-                        "tgId": tgId,
-                        "subId": subId,
-                    }
-                    payload = {"id": inboundId, "settings": json.dumps({"clients": [client_data]})}
-                    r = self.session.post(
-                        f"{self.panel_url}API/inbound/updateClient/{id_}", data=payload
-                    )
-                    if json.loads(r.content)["success"]:
-                        return {"success": True, "client": client_data}
-        return {"success": False, "client": None}
+    def edit_client(self,id_: str,alterId: int,email: str,totalGB: int,expTime: int,tgId: str,enabled: bool,subId: str,inboundId:int=None) -> dict:
+        try:
+            if not inboundId:
+                inboundId = next((inbound["id"] for inbound in self.get_all_inbounds() for client in json.loads(inbound["settings"])["clients"] if client["email"] == email), None)
+            client_data = {
+                "id": id_,
+                "alterId": alterId,
+                "email": email,
+                "totalGB": totalGB * (1024**3),
+                "expiryTime": expTime,
+                "enable": enabled,
+                "tgId": tgId,
+                "subId": subId,
+            }
+            payload = {"id": inboundId, "settings": json.dumps({"clients": [client_data]})}
+            r = self.session.post(
+                f"{self.panel_url}API/inbound/updateClient/{id_}", data=payload
+            )
+            if json.loads(r.content)["success"]:
+                return {"success": True, "client": client_data}
+        except:
+            return {"success": False, "client": None}
 
     def get_emails_of_inbound(self, inboundId: int) -> list:
         try:
@@ -152,15 +152,16 @@ class XUI:
             print(f"[error] no user with email: {email} exists!")
             return {}
 
-    def reset_client_traffic(self, email:str) -> bool:
-        for inbound in self.get_all_inbounds():
-            for client in json.loads(inbound["settings"])["clients"]:
-                if client["email"] == email:
-                    r = self.session.post(
-                        f"{self.panel_url}API/inbounds/{inbound['id']}/resetClientTraffic/{email}"
-                    )
-                    return json.loads(r.content)["success"]
-        return False
+    def reset_client_traffic(self, email:str, inboundId:int=None) -> bool:
+        try:
+            if not inboundId:
+                inboundId = next((inbound["id"] for inbound in self.get_all_inbounds() for client in json.loads(inbound["settings"])["clients"] if client["email"] == email), None)
+            r = self.session.post(
+                f"{self.panel_url}API/inbounds/{inboundId}/resetClientTraffic/{email}"
+            )
+            return json.loads(r.content)["success"]
+        except:
+            return False
     
     def renewal_subscription(self, email:str, totalGB:int=None, days=30) -> dict:
         data = self.get_client_stats(email)
