@@ -224,7 +224,7 @@ class XUI:
             if not inboundId:
                 inboundId = next((inbound["id"] for inbound in self.get_all_inbounds() for client in json.loads(inbound["settings"])["clients"] if client["email"] == email), None)
             client = [x for x in json.loads(self.get_inbound(inboundId)["settings"])["clients"] if x['email']==email][0]
-            inbound = panel.get_inbound(inboundId)
+            inbound = self.get_inbound(inboundId)
             settings = json.loads(inbound["streamSettings"])
             if inbound["protocol"] == "vmess":
                 data = {
